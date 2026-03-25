@@ -43,6 +43,11 @@ std::string CommandHandler::process(std::string_view input) {
             return RespParser::encode_error("ERR wrong number of arguments for 'rpush' command");
         }
         return handle_rpush(args);
+    } else if (cmd == "LPUSH") {
+        if (args.size() < 3) {
+            return RespParser::encode_error("ERR wrong number of arguments for 'lpush' command");
+        }
+        return handle_lpush(args);
     } else if (cmd == "LRANGE") {
         if (args.size() < 4) {
             return RespParser::encode_error("ERR wrong number of arguments for 'lrange' command");
@@ -109,6 +114,15 @@ std::string CommandHandler::handle_rpush(const std::vector<std::string>& args) {
     int64_t count = 0;
     for (size_t i = 2; i < args.size(); ++i) {
         count = store_.rpush(key, args[i]);
+    }
+    return RespParser::encode_integer(count);
+}
+
+std::string CommandHandler::handle_lpush(const std::vector<std::string>& args) {
+    const std::string& key = args[1];
+    int64_t count = 0;
+    for (size_t i = 2; i < args.size(); ++i) {
+        count = store_.lpush(key, args[i]);
     }
     return RespParser::encode_integer(count);
 }

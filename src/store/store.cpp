@@ -74,6 +74,29 @@ int64_t Store::rpush(const std::string& key, const std::string& value) {
     return static_cast<int64_t>(list.size());
 }
 
+int64_t Store::lpush(const std::string& key, const std::string& value) {
+    auto it = data_.find(key);
+
+    if (it == data_.end() || is_expired(it->second)) {
+        if (it != data_.end()) {
+            data_.erase(it);
+        }
+        Entry entry;
+        entry.value = std::deque<std::string>{value};
+        data_[key] = std::move(entry);
+        return 1;
+    }
+
+    Entry& entry = it->second;
+    if (!std::holds_alternative<std::deque<std::string>>(entry.value)) {
+        entry.value = std::deque<std::string>{};
+    }
+
+    auto& list = std::get<std::deque<std::string>>(entry.value);
+    list.push_front(value);
+    return static_cast<int64_t>(list.size());
+}
+
 std::vector<std::string> Store::lrange(const std::string& key, int64_t start, int64_t stop) {
     std::vector<std::string> result;
 
