@@ -7,7 +7,7 @@ Connection::Connection(int fd) : fd_(fd), buffer_(BUFFER_SIZE) {}
 Connection::~Connection() { close(); }
 
 Connection::Connection(Connection&& other) noexcept
-    : fd_(other.fd_), buffer_(std::move(other.buffer_)) {
+    : fd_(other.fd_), buffer_(std::move(other.buffer_)), bytes_read_(other.bytes_read_) {
     other.fd_ = -1;
 }
 
@@ -16,6 +16,7 @@ Connection& Connection::operator=(Connection&& other) noexcept {
         close();
         fd_ = other.fd_;
         buffer_ = std::move(other.buffer_);
+        bytes_read_ = other.bytes_read_;
         other.fd_ = -1;
     }
     return *this;
@@ -28,12 +29,12 @@ void Connection::close() {
     }
 }
 
-bool Connection::handle_read() {
-    ssize_t bytes_read = ::read(fd_, buffer_.data(), buffer_.size());
-    if (bytes_read <= 0) {
-        return false;
+std::optional<std::string_view> Connection::handle_read() {
+    bytes_read_ = ::read(fd_, buffer_.data(), buffer_.size());
+    if (bytes_read_ <= 0) {
+        return std::nullopt;
     }
-    return true;
+    return std::string_view(buffer_.data(), bytes_read_);
 }
 
 void Connection::send_data(const char* data, size_t len) { ::send(fd_, data, len, 0); }

@@ -12,5 +12,7 @@ find_path(ASIO_INCLUDE_DIR NAMES asio.hpp PATHS /usr/include)
 
 add_executable(redis ${SOURCE_FILES})
 
+target_include_directories(redis PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
 target_include_directories(redis PRIVATE ${ASIO_INCLUDE_DIR})
 target_link_libraries(redis PRIVATE Threads::Threads)

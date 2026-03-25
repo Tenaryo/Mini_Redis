@@ -44,8 +44,9 @@ int main() {
             auto it = connections.find(fd);
             if (it != connections.end()) {
                 Connection& conn = *it->second;
-                if (conn.handle_read()) {
-                    std::string response = handler.process("");
+                auto data = conn.handle_read();
+                if (data) {
+                    std::string response = handler.process(*data);
                     conn.send_data(response.c_str(), response.size());
                 } else {
                     std::cout << "Client disconnected\n";
