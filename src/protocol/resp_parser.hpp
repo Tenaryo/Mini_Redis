@@ -1,0 +1,14 @@
+#pragma once
+
+#include <expected>
+#include <string>
+#include <vector>
+
+class RespParser {
+  public:
+    static std::expected<std::vector<std::string>, std::string> parse(std::string_view input);
+
+    static std::string encode_simple_string(std::string_view s);
+    static std::string encode_bulk_string(std::string_view s);
+    static std::string encode_error(std::string_view s);
+};
