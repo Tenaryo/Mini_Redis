@@ -46,6 +46,7 @@ class Store {
              const std::string& value,
              std::optional<uint64_t> ttl_ms = std::nullopt);
     std::optional<std::string> get(const std::string& key);
+    std::optional<int64_t> incr(const std::string& key);
     bool exists(const std::string& key);
     bool del(const std::string& key);
 

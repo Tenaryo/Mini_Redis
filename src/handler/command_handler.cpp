@@ -54,6 +54,13 @@ CommandHandler::process_with_fd(int fd,
         }
         return {false, handle_get(args[1])};
     }
+    if (cmd == "INCR") {
+        if (args.size() < 2) {
+            return {false,
+                    RespParser::encode_error("ERR wrong number of arguments for 'incr' command")};
+        }
+        return {false, handle_incr(args[1])};
+    }
     if (cmd == "RPUSH") {
         if (args.size() < 3) {
             return {false,
@@ -176,6 +183,14 @@ std::string CommandHandler::handle_set(const std::vector<std::string>& args) {
 std::string CommandHandler::handle_get(const std::string& key) {
     auto value = store_.get(key);
     return value ? RespParser::encode_bulk_string(*value) : RespParser::encode_null_bulk_string();
+}
+
+std::string CommandHandler::handle_incr(const std::string& key) {
+    auto result = store_.incr(key);
+    if (!result) {
+        return RespParser::encode_error("ERR value is not an integer or out of range");
+    }
+    return RespParser::encode_integer(*result);
 }
 
 std::string CommandHandler::handle_rpush(const std::vector<std::string>& args) {
