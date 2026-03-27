@@ -102,6 +102,41 @@ std::optional<std::string> Store::get(const std::string& key) {
     return std::get<Redis::String>(entry->value);
 }
 
+std::optional<int64_t> Store::incr(const std::string& key) {
+    Entry* entry = find_valid_entry(key);
+
+    if (!entry) {
+        data_[key] = Entry{.value = Redis::String("1")};
+        return 1;
+    }
+
+    if (!std::holds_alternative<Redis::String>(entry->value)) {
+        return std::nullopt;
+    }
+
+    const std::string& str_value = std::get<Redis::String>(entry->value);
+
+    try {
+        size_t pos;
+        int64_t value = std::stoll(str_value, &pos);
+
+        if (pos != str_value.size()) {
+            return std::nullopt;
+        }
+
+        if (value == INT64_MAX) {
+            return std::nullopt;
+        }
+
+        int64_t new_value = value + 1;
+        entry->value = Redis::String(std::to_string(new_value));
+
+        return new_value;
+    } catch (...) {
+        return std::nullopt;
+    }
+}
+
 bool Store::exists(const std::string& key) { return find_valid_entry(key) != nullptr; }
 
 bool Store::del(const std::string& key) { return data_.erase(key) > 0; }
