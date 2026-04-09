@@ -217,6 +217,19 @@ CommandHandler::execute_command(const std::vector<std::string>& args,
         }
         return {false, RespParser::encode_simple_string("OK")};
     }
+    if (cmd == "WAIT") {
+        if (args.size() < 3) {
+            return {false,
+                    RespParser::encode_error("ERR wrong number of arguments for 'wait' command")};
+        }
+        auto numreplicas = parse_int<int64_t>(args[1]);
+        auto timeout = parse_int<int64_t>(args[2]);
+        if (!numreplicas || !timeout) {
+            return {false, RespParser::encode_error("ERR value is not an integer or out of range")};
+        }
+        size_t count = replica_count_fn_ ? replica_count_fn_() : 0;
+        return {false, RespParser::encode_integer(static_cast<int64_t>(count))};
+    }
     if (cmd == "PSYNC") {
         auto response = "+FULLRESYNC " + config_.master_replid + " " +
                         std::to_string(config_.master_repl_offset) + "\r\n";
