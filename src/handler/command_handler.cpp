@@ -212,6 +212,9 @@ CommandHandler::execute_command(const std::vector<std::string>& args,
         return {false, handle_info(args)};
     }
     if (cmd == "REPLCONF") {
+        if (args.size() >= 2 && to_upper(args[1]) == "GETACK") {
+            return {false, RespParser::encode_array({"REPLCONF", "ACK", "0"})};
+        }
         return {false, RespParser::encode_simple_string("OK")};
     }
     if (cmd == "PSYNC") {

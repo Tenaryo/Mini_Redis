@@ -1,6 +1,7 @@
 #include "replica_connector.hpp"
 #include "handler/command_handler.hpp"
 #include "protocol/resp_parser.hpp"
+#include "util/parse.hpp"
 #include <charconv>
 #include <cstring>
 #include <memory>
@@ -188,26 +189,44 @@ std::optional<std::string> ReplicaConnector::receive_rdb() {
     }
 }
 
-auto ReplicaConnector::process_propagated_commands() -> bool {
+auto ReplicaConnector::process_propagated_commands() -> std::optional<std::string> {
     if (fd_ < 0 || !handler_)
-        return false;
+        return std::nullopt;
 
     char buf[4096];
     auto n = ::read(fd_, buf, sizeof(buf));
     if (n <= 0)
-        return false;
+        return std::nullopt;
 
     pending_buffer_.append(buf, static_cast<size_t>(n));
 
+    std::string responses;
     while (true) {
         auto result = RespParser::parse_one(pending_buffer_);
         if (!result)
             break;
 
         auto resp = std::string_view(pending_buffer_.data(), result->consumed);
-        handler_->process(resp);
+        bool is_getack = result->args.size() >= 2 && to_upper(result->args[0]) == "REPLCONF" &&
+                         to_upper(result->args[1]) == "GETACK";
+
+        if (is_getack) {
+            responses += handler_->process(resp);
+        } else {
+            handler_->process(resp);
+        }
         pending_buffer_.erase(0, result->consumed);
     }
 
-    return true;
+    return responses;
+}
+
+void ReplicaConnector::send_response(std::string_view data) {
+    size_t sent = 0;
+    while (sent < data.size()) {
+        auto n = ::send(fd_, data.data() + sent, data.size() - sent, MSG_NOSIGNAL);
+        if (n <= 0)
+            break;
+        sent += static_cast<size_t>(n);
+    }
 }
