@@ -31,11 +31,13 @@ class CommandHandler {
     Store& store_;
     ServerConfig config_;
     BlockingManager* blocking_manager_{nullptr};
+    std::function<size_t()> replica_count_fn_;
     std::unordered_map<int, TransactionState> transactions_;
   public:
     explicit CommandHandler(Store& store, const ServerConfig& config = {});
 
     void set_blocking_manager(BlockingManager* manager) { blocking_manager_ = manager; }
+    void set_replica_count_fn(std::function<size_t()> fn) { replica_count_fn_ = std::move(fn); }
     const ServerConfig& config() const noexcept { return config_; }
 
     std::string process(std::string_view input);

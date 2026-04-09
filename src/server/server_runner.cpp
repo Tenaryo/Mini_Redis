@@ -111,6 +111,7 @@ int RedisApp::run() {
     }
 
     handler_.set_blocking_manager(&blocking_manager_);
+    handler_.set_replica_count_fn([this]() { return replica_fds_.size(); });
 
     event_loop_.run(
         server_.fd(),
