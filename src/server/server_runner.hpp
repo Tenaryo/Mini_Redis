@@ -51,6 +51,7 @@ class RedisApp {
     int count_acked_replicas() const;
     int count_acked_replicas_for(int64_t target) const;
     void finish_wait(int count);
+    void load_rdb();
   public:
     RedisApp(Server server, int listening_port, const ServerConfig& config);
     RedisApp(const RedisApp&) = delete;

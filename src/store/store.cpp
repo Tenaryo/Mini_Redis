@@ -357,3 +357,16 @@ std::optional<std::string> Store::get_stream_max_id(std::string_view key) {
 
     return stream->back().id;
 }
+
+std::vector<std::string> Store::keys() {
+    std::vector<std::string> result;
+    for (auto it = data_.begin(); it != data_.end();) {
+        if (is_expired(it->second)) {
+            it = data_.erase(it);
+        } else {
+            result.push_back(it->first);
+            ++it;
+        }
+    }
+    return result;
+}

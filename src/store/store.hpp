@@ -71,4 +71,5 @@ class Store {
     std::optional<std::string> get_stream_max_id(std::string_view key);
 
     std::string get_type(std::string_view key);
+    std::vector<std::string> keys();
 };

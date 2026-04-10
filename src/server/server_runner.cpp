@@ -1,8 +1,11 @@
 #include "server_runner.hpp"
 #include "protocol/resp_parser.hpp"
+#include "rdb/rdb_parser.hpp"
 #include "replica/replica_connector.hpp"
 #include "util/parse.hpp"
 
+#include <chrono>
+#include <filesystem>
 #include <iostream>
 
 RedisApp::RedisApp(Server server, int listening_port, const ServerConfig& config)
@@ -203,8 +206,36 @@ void RedisApp::on_event(int fd) {
     }
 }
 
+void RedisApp::load_rdb() {
+    const auto& config = handler_.config();
+    if (config.dir.empty() || config.dbfilename.empty())
+        return;
+
+    auto path = std::filesystem::path(config.dir) / config.dbfilename;
+    auto entries = RdbParser::load_file(path.string());
+
+    using namespace std::chrono;
+    auto now_ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+
+    for (auto& [key, entry] : entries) {
+        if (!std::holds_alternative<Redis::String>(entry.value))
+            continue;
+
+        std::optional<uint64_t> ttl;
+        if (entry.expire_ms) {
+            auto remaining = static_cast<int64_t>(*entry.expire_ms) - now_ms;
+            if (remaining <= 0)
+                continue;
+            ttl = static_cast<uint64_t>(remaining);
+        }
+
+        store_.set(key, std::move(std::get<Redis::String>(entry.value)), ttl);
+    }
+}
+
 int RedisApp::run() {
     event_loop_.add_fd(server_.fd());
+    load_rdb();
 
     if (handler_.config().is_replica()) {
         if (!perform_replica_handshake()) {
