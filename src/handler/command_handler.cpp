@@ -1,6 +1,7 @@
 #include "command_handler.hpp"
 #include "block_manager/blocking_manager.hpp"
 #include "protocol/resp_parser.hpp"
+#include "pubsub/pubsub_manager.hpp"
 #include "store/store.hpp"
 #include "util/parse.hpp"
 #include <array>
@@ -255,6 +256,18 @@ CommandHandler::execute_command(const std::vector<std::string>& args,
         ProcessResult psync_result(false, response);
         psync_result.is_replica_handshake = true;
         return psync_result;
+    }
+    if (cmd == "SUBSCRIBE") {
+        if (args.size() < 2) {
+            return {
+                false,
+                RespParser::encode_error("ERR wrong number of arguments for 'subscribe' command")};
+        }
+        size_t count = pubsub_manager_ ? pubsub_manager_->subscribe(fd, args[1]) : 1;
+        auto resp = "*3\r\n" + RespParser::encode_bulk_string("subscribe") +
+                    RespParser::encode_bulk_string(args[1]) +
+                    RespParser::encode_integer(static_cast<int64_t>(count));
+        return {false, std::move(resp)};
     }
 
     return {false, RespParser::encode_error("ERR unknown command '" + cmd + "'")};

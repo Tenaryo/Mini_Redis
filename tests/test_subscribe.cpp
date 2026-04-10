@@ -10,7 +10,8 @@ void test_subscribe_single_channel() {
 
     auto response = handler.process("*2\r\n$9\r\nsubscribe\r\n$3\r\nfoo\r\n");
 
-    auto expected = RespParser::encode_array({"subscribe", "foo", "1"});
+    auto expected = "*3\r\n" + RespParser::encode_bulk_string("subscribe") +
+                    RespParser::encode_bulk_string("foo") + RespParser::encode_integer(1);
     assert(response == expected);
 
     std::cout << "Test 1 passed: SUBSCRIBE foo returns [\"subscribe\", \"foo\", 1]\n";
