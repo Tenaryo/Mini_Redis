@@ -117,6 +117,9 @@ CommandHandler::execute_command(const std::vector<std::string>& args,
     const std::string& cmd = args[0];
 
     if (cmd == "PING") {
+        if (pubsub_manager_ && pubsub_manager_->is_subscribed(fd)) {
+            return {false, RespParser::encode_array({"pong", ""})};
+        }
         return {false, handle_ping()};
     }
     if (cmd == "ECHO") {
