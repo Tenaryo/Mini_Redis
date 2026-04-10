@@ -187,6 +187,13 @@ CommandHandler::execute_command(const std::vector<std::string>& args,
         }
         return {false, RespParser::encode_simple_string(store_.get_type(args[1]))};
     }
+    if (cmd == "KEYS") {
+        if (args.size() < 2) {
+            return {false,
+                    RespParser::encode_error("ERR wrong number of arguments for 'keys' command")};
+        }
+        return {false, RespParser::encode_array(store_.keys())};
+    }
     if (cmd == "XADD") {
         if (args.size() < 4 || (args.size() - 3) % 2 != 0) {
             return {false,

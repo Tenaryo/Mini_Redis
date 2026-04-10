@@ -15,6 +15,7 @@ add_executable(redis
     src/handler/command_handler.cpp
     src/main.cpp
     src/protocol/resp_parser.cpp
+    src/rdb/rdb_parser.cpp
     src/replica/replica_connector.cpp
     src/server/server.cpp
     src/server/server_runner.cpp
