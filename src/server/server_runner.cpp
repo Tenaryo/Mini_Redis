@@ -201,6 +201,7 @@ void RedisApp::on_event(int fd) {
         replica_offsets_.erase(fd);
         replica_buffers_.erase(fd);
         blocking_manager_.unblock_client(fd);
+        pubsub_manager_.unsubscribe(fd);
         event_loop_.remove_fd(fd);
         connections_.erase(it);
     }
@@ -251,6 +252,7 @@ int RedisApp::run() {
     }
 
     handler_.set_blocking_manager(&blocking_manager_);
+    handler_.set_pubsub_manager(&pubsub_manager_);
     handler_.set_replica_count_fn([this]() { return replica_fds_.size(); });
 
     event_loop_.run(
