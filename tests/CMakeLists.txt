@@ -8,6 +8,7 @@ foreach(test_source ${TEST_SOURCES})
         ${CMAKE_SOURCE_DIR}/src/connection/connection.cpp
         ${CMAKE_SOURCE_DIR}/src/handler/command_handler.cpp
         ${CMAKE_SOURCE_DIR}/src/protocol/resp_parser.cpp
+        ${CMAKE_SOURCE_DIR}/src/rdb/rdb_parser.cpp
         ${CMAKE_SOURCE_DIR}/src/replica/replica_connector.cpp
         ${CMAKE_SOURCE_DIR}/src/store/store.cpp
     )
