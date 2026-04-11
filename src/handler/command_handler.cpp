@@ -286,6 +286,15 @@ CommandHandler::execute_command(const std::vector<std::string>& args,
                     RespParser::encode_integer(static_cast<int64_t>(count));
         return {false, std::move(resp)};
     }
+    if (cmd == "PUBLISH") {
+        if (args.size() < 3) {
+            return {
+                false,
+                RespParser::encode_error("ERR wrong number of arguments for 'publish' command")};
+        }
+        auto count = pubsub_manager_ ? pubsub_manager_->subscriber_count(args[1]) : 0;
+        return {false, RespParser::encode_integer(static_cast<int64_t>(count))};
+    }
 
     return {false, RespParser::encode_error("ERR unknown command '" + cmd + "'")};
 }

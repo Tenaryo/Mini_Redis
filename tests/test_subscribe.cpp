@@ -96,7 +96,7 @@ void test_publish_no_subscribers() {
     handler.set_pubsub_manager(&pubsub);
 
     auto result = handler.process_with_fd(
-        10, "*3\r\n$7\r\nPUBLISH\r\n$10\r\nnonexistent\r\n$3\r\nmsg\r\n", nullptr);
+        10, "*3\r\n$7\r\nPUBLISH\r\n$11\r\nnonexistent\r\n$3\r\nmsg\r\n", nullptr);
     assert(result.response == RespParser::encode_integer(0));
     std::cout << "Test 7 passed: PUBLISH nonexistent returns 0\n";
 }
