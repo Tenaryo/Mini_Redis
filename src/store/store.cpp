@@ -434,6 +434,11 @@ std::vector<std::string> Store::zrange(std::string_view key, int64_t start, int6
     return result;
 }
 
+int64_t Store::zcard(std::string_view key) {
+    auto* zset = get_zset(key);
+    return zset ? static_cast<int64_t>(zset->member_scores.size()) : 0;
+}
+
 std::vector<std::string> Store::keys() {
     std::vector<std::string> result;
     for (auto it = data_.begin(); it != data_.end();) {
