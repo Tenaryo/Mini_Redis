@@ -233,6 +233,13 @@ CommandHandler::execute_command(const std::vector<std::string>& args,
         }
         return {false, handle_zrank(args)};
     }
+    if (cmd == "ZRANGE") {
+        if (args.size() < 4) {
+            return {false,
+                    RespParser::encode_error("ERR wrong number of arguments for 'zrange' command")};
+        }
+        return {false, handle_zrange(args)};
+    }
     if (cmd == "XRANGE") {
         if (args.size() < 4) {
             return {false,
@@ -530,6 +537,17 @@ std::string CommandHandler::handle_zadd(const std::vector<std::string>& args) {
 std::string CommandHandler::handle_zrank(const std::vector<std::string>& args) {
     auto rank = store_.zrank(args[1], args[2]);
     return rank ? RespParser::encode_integer(*rank) : RespParser::encode_null_bulk_string();
+}
+
+std::string CommandHandler::handle_zrange(const std::vector<std::string>& args) {
+    const std::string& key = args[1];
+    auto start_opt = parse_int<int64_t>(args[2]);
+    auto stop_opt = parse_int<int64_t>(args[3]);
+    if (!start_opt || !stop_opt) {
+        return RespParser::encode_error("ERR value is not an integer or out of range");
+    }
+    auto elements = store_.zrange(key, *start_opt, *stop_opt);
+    return RespParser::encode_array(elements);
 }
 
 std::string CommandHandler::handle_xadd(const std::vector<std::string>& args) {

@@ -403,7 +403,25 @@ std::optional<int64_t> Store::zrank(std::string_view key, std::string_view membe
 }
 
 std::vector<std::string> Store::zrange(std::string_view key, int64_t start, int64_t stop) {
-    return {};
+    auto* zset = get_zset(key);
+    if (!zset)
+        return {};
+
+    int64_t len = static_cast<int64_t>(zset->entries.size());
+    if (start >= len || start > stop)
+        return {};
+    if (stop >= len)
+        stop = len - 1;
+
+    auto it = std::next(zset->entries.begin(), start);
+    auto end_it = std::next(zset->entries.begin(), stop + 1);
+
+    std::vector<std::string> result;
+    result.reserve(static_cast<size_t>(stop - start + 1));
+    for (; it != end_it; ++it) {
+        result.push_back(it->second);
+    }
+    return result;
 }
 
 std::vector<std::string> Store::keys() {
