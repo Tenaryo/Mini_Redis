@@ -240,6 +240,13 @@ CommandHandler::execute_command(const std::vector<std::string>& args,
         }
         return {false, handle_zrange(args)};
     }
+    if (cmd == "ZCARD") {
+        if (args.size() < 2) {
+            return {false,
+                    RespParser::encode_error("ERR wrong number of arguments for 'zcard' command")};
+        }
+        return {false, handle_zcard(args[1])};
+    }
     if (cmd == "XRANGE") {
         if (args.size() < 4) {
             return {false,
@@ -548,6 +555,10 @@ std::string CommandHandler::handle_zrange(const std::vector<std::string>& args) 
     }
     auto elements = store_.zrange(key, *start_opt, *stop_opt);
     return RespParser::encode_array(elements);
+}
+
+std::string CommandHandler::handle_zcard(const std::string& key) {
+    return RespParser::encode_integer(store_.zcard(key));
 }
 
 std::string CommandHandler::handle_xadd(const std::vector<std::string>& args) {
