@@ -408,6 +408,16 @@ std::vector<std::string> Store::zrange(std::string_view key, int64_t start, int6
         return {};
 
     int64_t len = static_cast<int64_t>(zset->entries.size());
+
+    if (start < 0)
+        start = len + start;
+    if (stop < 0)
+        stop = len + stop;
+    if (start < 0)
+        start = 0;
+    if (stop < 0)
+        stop = 0;
+
     if (start >= len || start > stop)
         return {};
     if (stop >= len)
