@@ -631,7 +631,8 @@ std::string CommandHandler::handle_geoadd(const std::vector<std::string>& args) 
         return RespParser::encode_error(buf);
     }
 
-    return RespParser::encode_integer(1);
+    auto added = store_.zadd(args[1], 0.0, args[4]);
+    return RespParser::encode_integer(added);
 }
 
 std::string CommandHandler::handle_xadd(const std::vector<std::string>& args) {
