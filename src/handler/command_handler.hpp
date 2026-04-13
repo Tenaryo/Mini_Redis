@@ -76,6 +76,7 @@ class CommandHandler {
     std::string handle_zscore(const std::vector<std::string>& args);
     std::string handle_zrem(const std::vector<std::string>& args);
     std::string handle_geoadd(const std::vector<std::string>& args);
+    std::string handle_geopos(const std::vector<std::string>& args);
     ProcessResult handle_xread_with_blocking(int fd, const std::vector<std::string>& args);
     ProcessResult
     handle_xadd_with_blocking(const std::vector<std::string>& args,
