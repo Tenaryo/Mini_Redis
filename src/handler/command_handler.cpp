@@ -279,6 +279,13 @@ CommandHandler::execute_command(const std::vector<std::string>& args,
         }
         return {false, handle_geoadd(args)};
     }
+    if (cmd == "GEOPOS") {
+        if (args.size() < 3) {
+            return {false,
+                    RespParser::encode_error("ERR wrong number of arguments for 'geopos' command")};
+        }
+        return {false, handle_geopos(args)};
+    }
     if (cmd == "XRANGE") {
         if (args.size() < 4) {
             return {false,
@@ -630,6 +637,26 @@ std::string CommandHandler::handle_geoadd(const std::vector<std::string>& args) 
     auto score = static_cast<double>(geo::encode(lat, lon));
     auto added = store_.zadd(args[1], score, args[4]);
     return RespParser::encode_integer(added);
+}
+
+std::string CommandHandler::handle_geopos(const std::vector<std::string>& args) {
+    const auto& key = args[1];
+    auto count = args.size() - 2;
+
+    std::string resp;
+    resp.reserve(count * 24);
+    resp += "*" + std::to_string(count) + "\r\n";
+
+    for (size_t i = 2; i < args.size(); ++i) {
+        auto score = store_.zscore(key, args[i]);
+        if (score) {
+            resp += "*2\r\n$1\r\n0\r\n$1\r\n0\r\n";
+        } else {
+            resp += "*-1\r\n";
+        }
+    }
+
+    return resp;
 }
 
 std::string CommandHandler::handle_xadd(const std::vector<std::string>& args) {
