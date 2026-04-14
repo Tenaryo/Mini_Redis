@@ -41,6 +41,11 @@ static constexpr std::array<char, 88> kEmptyRdb{
 CommandHandler::CommandHandler(Store& store, const ServerConfig& config)
     : store_(store), config_(config) {}
 
+void CommandHandler::remove_connection(int fd) {
+    authenticated_fds_.erase(fd);
+    transactions_.erase(fd);
+}
+
 std::string CommandHandler::process(std::string_view input) {
     auto result = process_with_fd(-1, input, nullptr);
     return result.response;
@@ -74,6 +79,15 @@ CommandHandler::process_with_fd(int fd,
         if (std::ranges::find(kSubscribedAllowed, cmd) == kSubscribedAllowed.end()) {
             return {false,
                     RespParser::encode_error("ERR Can't execute '" + cmd + "' in subscribed mode")};
+        }
+    }
+
+    if (cmd != "AUTH" && !authenticated_fds_.contains(fd)) {
+        auto* user = acl_manager_.get_user("default");
+        if (user && user->nopass) {
+            authenticated_fds_.insert(fd);
+        } else {
+            return {false, RespParser::encode_error("NOAUTH Authentication required.")};
         }
     }
 
@@ -359,6 +373,7 @@ CommandHandler::execute_command(const std::vector<std::string>& args,
                     RespParser::encode_error("ERR wrong number of arguments for 'auth' command")};
         }
         if (acl_manager_.authenticate(args[1], args[2])) {
+            authenticated_fds_.insert(fd);
             return {false, RespParser::encode_simple_string("OK")};
         }
         return {false,
