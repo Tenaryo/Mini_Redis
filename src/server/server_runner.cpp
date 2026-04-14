@@ -202,6 +202,7 @@ void RedisApp::on_event(int fd) {
         replica_buffers_.erase(fd);
         blocking_manager_.unblock_client(fd);
         pubsub_manager_.unsubscribe(fd);
+        handler_.remove_connection(fd);
         event_loop_.remove_fd(fd);
         connections_.erase(it);
     }

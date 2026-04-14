@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "server/acl_manager.hpp"
@@ -40,6 +41,7 @@ class CommandHandler {
     std::function<size_t()> replica_count_fn_;
     AclManager acl_manager_;
     std::unordered_map<int, TransactionState> transactions_;
+    std::unordered_set<int> authenticated_fds_;
   public:
     explicit CommandHandler(Store& store, const ServerConfig& config = {});
 
@@ -47,6 +49,8 @@ class CommandHandler {
     void set_pubsub_manager(PubSubManager* manager) { pubsub_manager_ = manager; }
     void set_replica_count_fn(std::function<size_t()> fn) { replica_count_fn_ = std::move(fn); }
     const ServerConfig& config() const noexcept { return config_; }
+
+    void remove_connection(int fd);
 
     std::string process(std::string_view input);
     ProcessResult process_with_fd(int fd,
