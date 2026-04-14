@@ -66,6 +66,53 @@ void test_acl_setuser_password_updates_getuser_response() {
                  "SHA-256 password hash\n";
 }
 
+void test_auth_wrong_password_returns_wrongpass() {
+    Store store;
+    ServerConfig config;
+    CommandHandler handler(store, config);
+
+    std::string setuser_input =
+        "*4\r\n$3\r\nACL\r\n$7\r\nSETUSER\r\n$7\r\ndefault\r\n$11\r\n>mypassword\r\n";
+    handler.process(setuser_input);
+
+    std::string auth_input = "*3\r\n$4\r\nAUTH\r\n$7\r\ndefault\r\n$12\r\nwrongpassword\r\n";
+    auto response = handler.process(auth_input);
+
+    assert(response.starts_with("-WRONGPASS"));
+
+    std::cout << "\u2713 Test passed: AUTH with wrong password returns WRONGPASS error\n";
+}
+
+void test_auth_correct_password_returns_ok() {
+    Store store;
+    ServerConfig config;
+    CommandHandler handler(store, config);
+
+    std::string setuser_input =
+        "*4\r\n$3\r\nACL\r\n$7\r\nSETUSER\r\n$7\r\ndefault\r\n$11\r\n>mypassword\r\n";
+    handler.process(setuser_input);
+
+    std::string auth_input = "*3\r\n$4\r\nAUTH\r\n$7\r\ndefault\r\n$10\r\nmypassword\r\n";
+    auto response = handler.process(auth_input);
+
+    assert(response == "+OK\r\n");
+
+    std::cout << "\u2713 Test passed: AUTH with correct password returns OK\n";
+}
+
+void test_auth_nonexistent_user_returns_wrongpass() {
+    Store store;
+    ServerConfig config;
+    CommandHandler handler(store, config);
+
+    std::string auth_input = "*3\r\n$4\r\nAUTH\r\n$10\r\nnonexistent\r\n$10\r\nmypassword\r\n";
+    auto response = handler.process(auth_input);
+
+    assert(response.starts_with("-WRONGPASS"));
+
+    std::cout << "\u2713 Test passed: AUTH with nonexistent user returns WRONGPASS error\n";
+}
+
 int main() {
     std::cout << "Running ACL tests...\n\n";
 
@@ -73,6 +120,9 @@ int main() {
     test_acl_getuser_default_returns_flags_with_nopass();
     test_acl_setuser_with_password_returns_ok();
     test_acl_setuser_password_updates_getuser_response();
+    test_auth_wrong_password_returns_wrongpass();
+    test_auth_correct_password_returns_ok();
+    test_auth_nonexistent_user_returns_wrongpass();
 
     std::cout << "\n\u2713 All tests passed!\n";
     return 0;
