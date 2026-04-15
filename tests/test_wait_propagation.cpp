@@ -133,7 +133,7 @@ class TestServer {
     void process_client(int fd, Connection& conn, std::string_view data) {
         auto result = handler_.process_with_fd(fd, data, nullptr);
 
-        if (result.is_wait) {
+        if (std::holds_alternative<ProcessResult::Wait>(result.state)) {
             int acked = 0;
             for (int rfd : replicas_) {
                 auto it = replica_offsets_.find(rfd);
@@ -141,17 +141,21 @@ class TestServer {
                     ++acked;
             }
 
-            if (master_offset_ == 0 || acked >= result.wait_numreplicas) {
+            if (master_offset_ == 0 ||
+                acked >= std::get<ProcessResult::Wait>(result.state).numreplicas) {
                 acked = static_cast<int>(replicas_.size());
                 auto resp = RespParser::encode_integer(acked);
                 conn.send_data(resp.c_str(), resp.size());
             } else {
-                auto deadline = result.wait_timeout_ms == 0
-                                    ? std::chrono::steady_clock::now()
-                                    : std::chrono::steady_clock::now() +
-                                          std::chrono::milliseconds(result.wait_timeout_ms);
+                auto timeout_ms = std::get<ProcessResult::Wait>(result.state).timeout_ms;
+                auto deadline = timeout_ms == 0 ? std::chrono::steady_clock::now()
+                                                : std::chrono::steady_clock::now() +
+                                                      std::chrono::milliseconds(timeout_ms);
                 wait_state_.emplace(
-                    WaitState{fd, master_offset_, result.wait_numreplicas, deadline});
+                    WaitState{fd,
+                              master_offset_,
+                              std::get<ProcessResult::Wait>(result.state).numreplicas,
+                              deadline});
 
                 for (int rfd : replicas_) {
                     if (auto rit = conns_.find(rfd); rit != conns_.end()) {
@@ -161,11 +165,18 @@ class TestServer {
                 }
             }
         } else {
-            if (!result.should_block)
-                conn.send_data(result.response.c_str(), result.response.size());
+            if (!std::holds_alternative<ProcessResult::Block>(result.state)) {
+                std::string resp;
+                if (std::holds_alternative<ProcessResult::Normal>(result.state)) {
+                    resp = std::get<ProcessResult::Normal>(result.state).response;
+                } else {
+                    resp = std::get<ProcessResult::ReplicaHandshake>(result.state).response;
+                }
+                conn.send_data(resp.c_str(), resp.size());
+            }
         }
 
-        if (result.is_replica_handshake)
+        if (std::holds_alternative<ProcessResult::ReplicaHandshake>(result.state))
             replicas_.insert(fd);
 
         if (!result.propagate_args.empty()) {

@@ -118,7 +118,7 @@ void test_nopass_connection_auto_authenticated() {
     CommandHandler handler(store, config);
 
     auto result = handler.process_with_fd(10, "*2\r\n$3\r\nACL\r\n$6\r\nWHOAMI\r\n", nullptr);
-    assert(result.response == "$7\r\ndefault\r\n");
+    assert(std::get<ProcessResult::Normal>(result.state).response == "$7\r\ndefault\r\n");
 
     std::cout << "\u2713 Test passed: nopass default user auto-authenticates new connection\n";
 }
@@ -132,7 +132,7 @@ void test_password_set_new_connection_gets_noauth() {
         10, "*4\r\n$3\r\nACL\r\n$7\r\nSETUSER\r\n$7\r\ndefault\r\n$11\r\n>mypassword\r\n", nullptr);
 
     auto result = handler.process_with_fd(20, "*2\r\n$3\r\nACL\r\n$6\r\nWHOAMI\r\n", nullptr);
-    assert(result.response.starts_with("-NOAUTH"));
+    assert(std::get<ProcessResult::Normal>(result.state).response.starts_with("-NOAUTH"));
 
     std::cout << "\u2713 Test passed: new connection gets NOAUTH after password is set\n";
 }
@@ -148,7 +148,7 @@ void test_existing_connection_remains_authenticated() {
         10, "*4\r\n$3\r\nACL\r\n$7\r\nSETUSER\r\n$7\r\ndefault\r\n$11\r\n>mypassword\r\n", nullptr);
 
     auto result = handler.process_with_fd(10, "*2\r\n$3\r\nACL\r\n$6\r\nWHOAMI\r\n", nullptr);
-    assert(result.response == "$7\r\ndefault\r\n");
+    assert(std::get<ProcessResult::Normal>(result.state).response == "$7\r\ndefault\r\n");
 
     std::cout << "\u2713 Test passed: existing authenticated connection remains authenticated\n";
 }
@@ -161,13 +161,13 @@ void test_auth_success_allows_commands() {
     handler.process_with_fd(
         10, "*4\r\n$3\r\nACL\r\n$7\r\nSETUSER\r\n$7\r\ndefault\r\n$11\r\n>mypassword\r\n", nullptr);
 
-    auto auth_result =
-        handler.process_with_fd(20, "*3\r\n$4\r\nAUTH\r\n$7\r\ndefault\r\n$10\r\nmypassword\r\n", nullptr);
-    assert(auth_result.response == "+OK\r\n");
+    auto auth_result = handler.process_with_fd(
+        20, "*3\r\n$4\r\nAUTH\r\n$7\r\ndefault\r\n$10\r\nmypassword\r\n", nullptr);
+    assert(std::get<ProcessResult::Normal>(auth_result.state).response == "+OK\r\n");
 
     auto whoami_result =
         handler.process_with_fd(20, "*2\r\n$3\r\nACL\r\n$6\r\nWHOAMI\r\n", nullptr);
-    assert(whoami_result.response == "$7\r\ndefault\r\n");
+    assert(std::get<ProcessResult::Normal>(whoami_result.state).response == "$7\r\ndefault\r\n");
 
     std::cout << "\u2713 Test passed: AUTH success allows subsequent commands\n";
 }
@@ -182,11 +182,11 @@ void test_auth_failure_keeps_noauth() {
 
     auto auth_result = handler.process_with_fd(
         20, "*3\r\n$4\r\nAUTH\r\n$7\r\ndefault\r\n$12\r\nwrongpassword\r\n", nullptr);
-    assert(auth_result.response.starts_with("-WRONGPASS"));
+    assert(std::get<ProcessResult::Normal>(auth_result.state).response.starts_with("-WRONGPASS"));
 
     auto whoami_result =
         handler.process_with_fd(20, "*2\r\n$3\r\nACL\r\n$6\r\nWHOAMI\r\n", nullptr);
-    assert(whoami_result.response.starts_with("-NOAUTH"));
+    assert(std::get<ProcessResult::Normal>(whoami_result.state).response.starts_with("-NOAUTH"));
 
     std::cout << "\u2713 Test passed: AUTH failure keeps connection unauthenticated\n";
 }

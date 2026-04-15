@@ -13,8 +13,8 @@ void test_discard_in_multi_returns_ok() {
     std::string discard_input = "*1\r\n$7\r\nDISCARD\r\n";
     auto result = handler.process_with_fd(1, discard_input, nullptr);
 
-    assert(!result.should_block);
-    assert(result.response == "+OK\r\n");
+    assert(!std::holds_alternative<ProcessResult::Block>(result.state));
+    assert(std::get<ProcessResult::Normal>(result.state).response == "+OK\r\n");
 
     std::cout << "\u2713 Test 1 passed: DISCARD in MULTI returns OK\n";
 }
@@ -26,8 +26,9 @@ void test_discard_without_multi_returns_error() {
     std::string discard_input = "*1\r\n$7\r\nDISCARD\r\n";
     auto result = handler.process_with_fd(1, discard_input, nullptr);
 
-    assert(!result.should_block);
-    assert(result.response == "-ERR DISCARD without MULTI\r\n");
+    assert(!std::holds_alternative<ProcessResult::Block>(result.state));
+    assert(std::get<ProcessResult::Normal>(result.state).response ==
+           "-ERR DISCARD without MULTI\r\n");
 
     std::cout << "\u2713 Test 2 passed: DISCARD without MULTI returns error\n";
 }
@@ -42,8 +43,8 @@ void test_discard_then_exec_returns_error() {
 
     auto result = handler.process_with_fd(1, "*1\r\n$4\r\nEXEC\r\n", nullptr);
 
-    assert(!result.should_block);
-    assert(result.response == "-ERR EXEC without MULTI\r\n");
+    assert(!std::holds_alternative<ProcessResult::Block>(result.state));
+    assert(std::get<ProcessResult::Normal>(result.state).response == "-ERR EXEC without MULTI\r\n");
 
     std::cout << "\u2713 Test 3 passed: EXEC after DISCARD returns error\n";
 }
@@ -63,13 +64,13 @@ void test_discard_clears_watch_state_allows_subsequent_transaction() {
     handler.process_with_fd(2, "*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\n400\r\n", nullptr);
 
     auto discard_result = handler.process_with_fd(1, "*1\r\n$7\r\nDISCARD\r\n", nullptr);
-    assert(discard_result.response == "+OK\r\n");
+    assert(std::get<ProcessResult::Normal>(discard_result.state).response == "+OK\r\n");
 
     handler.process_with_fd(1, "*1\r\n$5\r\nMULTI\r\n", nullptr);
     handler.process_with_fd(1, "*3\r\n$3\r\nSET\r\n$3\r\nbar\r\n$3\r\n300\r\n", nullptr);
 
     auto exec_result = handler.process_with_fd(1, "*1\r\n$4\r\nEXEC\r\n", nullptr);
-    assert(exec_result.response == "*1\r\n+OK\r\n");
+    assert(std::get<ProcessResult::Normal>(exec_result.state).response == "*1\r\n+OK\r\n");
 
     auto bar_val = store.get("bar");
     assert(bar_val.has_value());
