@@ -154,22 +154,28 @@ void RedisApp::on_event(int fd) {
 
     Connection& conn = *it->second;
     if (auto data = conn.handle_read()) {
-        auto result = handler_.process_with_fd(
-            fd, *data, [this](int fd, const std::string& resp) { send_to_client(fd, resp); });
+        auto result =
+            handler_.process_with_fd(fd, *data, [this](int client_fd, const std::string& resp) {
+                send_to_client(client_fd, resp);
+            });
 
-        if (result.is_wait) {
+        if (std::holds_alternative<ProcessResult::Wait>(result.state)) {
             int acked = count_acked_replicas_for(master_offset_);
-            if (master_offset_ == 0 || acked >= result.wait_numreplicas) {
+            if (master_offset_ == 0 ||
+                acked >= std::get<ProcessResult::Wait>(result.state).numreplicas) {
                 acked = static_cast<int>(replica_fds_.size());
                 auto resp = RespParser::encode_integer(acked);
                 conn.send_data(resp.c_str(), resp.size());
             } else {
-                auto deadline = result.wait_timeout_ms == 0
-                                    ? std::chrono::steady_clock::now()
-                                    : std::chrono::steady_clock::now() +
-                                          std::chrono::milliseconds(result.wait_timeout_ms);
+                auto timeout_ms = std::get<ProcessResult::Wait>(result.state).timeout_ms;
+                auto deadline = timeout_ms == 0 ? std::chrono::steady_clock::now()
+                                                : std::chrono::steady_clock::now() +
+                                                      std::chrono::milliseconds(timeout_ms);
                 wait_state_.emplace(
-                    WaitState{fd, master_offset_, result.wait_numreplicas, deadline});
+                    WaitState{fd,
+                              master_offset_,
+                              std::get<ProcessResult::Wait>(result.state).numreplicas,
+                              deadline});
 
                 for (int rfd : replica_fds_) {
                     if (auto rit = connections_.find(rfd); rit != connections_.end()) {
@@ -178,13 +184,17 @@ void RedisApp::on_event(int fd) {
                     }
                 }
             }
-        } else {
-            if (!result.should_block) {
-                conn.send_data(result.response.c_str(), result.response.size());
+        } else if (!std::holds_alternative<ProcessResult::Block>(result.state)) {
+            std::string resp;
+            if (std::holds_alternative<ProcessResult::Normal>(result.state)) {
+                resp = std::get<ProcessResult::Normal>(result.state).response;
+            } else {
+                resp = std::get<ProcessResult::ReplicaHandshake>(result.state).response;
             }
+            conn.send_data(resp.c_str(), resp.size());
         }
 
-        if (result.is_replica_handshake) {
+        if (std::holds_alternative<ProcessResult::ReplicaHandshake>(result.state)) {
             replica_fds_.insert(fd);
         }
         if (!result.propagate_args.empty()) {

@@ -147,11 +147,17 @@ class TestServer {
                 }
 
                 auto result = handler_.process_with_fd(fd, *data, nullptr);
-                if (!result.should_block) {
-                    it->second->send_data(result.response.c_str(), result.response.size());
+                if (!std::holds_alternative<ProcessResult::Block>(result.state)) {
+                    std::string resp;
+                    if (std::holds_alternative<ProcessResult::Normal>(result.state)) {
+                        resp = std::get<ProcessResult::Normal>(result.state).response;
+                    } else {
+                        resp = std::get<ProcessResult::ReplicaHandshake>(result.state).response;
+                    }
+                    it->second->send_data(resp.c_str(), resp.size());
                 }
 
-                if (result.is_replica_handshake) {
+                if (std::holds_alternative<ProcessResult::ReplicaHandshake>(result.state)) {
                     replicas_.insert(fd);
                 }
 
@@ -196,7 +202,7 @@ void test_psync_marks_replica_connection() {
 
     auto input = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n";
     auto result = handler.process_with_fd(42, input, nullptr);
-    assert(result.is_replica_handshake);
+    assert(std::holds_alternative<ProcessResult::ReplicaHandshake>(result.state));
     assert(result.propagate_args.empty());
 
     std::cout << "\u2713 Test passed: PSYNC marks connection as replica\n";
