@@ -1,4 +1,4 @@
-# Contributing to Redis_Cpp
+# Contributing to Credis
 
 Thanks for your interest in contributing! This guide will help you get started.
 
